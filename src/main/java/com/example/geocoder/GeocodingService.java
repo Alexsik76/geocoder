@@ -15,7 +15,7 @@ public class GeocodingService {
         this.googleClient = googleClient;
     }
 
-    @Cacheable(value = "geocoding", unless = "#result.isEmpty()")
+    @Cacheable(value = "geocoding", unless = "#result == null")
     public Optional<GeocodingResult> geocode(String rawAddress) {
         String address = normalize(rawAddress);
 
