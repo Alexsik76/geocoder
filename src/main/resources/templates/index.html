@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Geocoder Test Task</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .htmx-indicator { display: none; color: #666; font-style: italic; }
+        .htmx-request .htmx-indicator { display: inline; }
+        input { padding: 8px; width: 300px; }
+        button { padding: 8px 16px; cursor: pointer; }
+        .container { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Геокодер (Тестовое задание)</h2>
+    
+    <div class="container">
+        <form hx-get="/ui/geocode" hx-target="#result" hx-indicator="#loading" onsubmit="event.preventDefault();">
+            <input type="text" name="address" placeholder="Введите адрес, например: Kyiv" required>
+            <button type="submit">Найти координаты</button>
+            <span id="loading" class="htmx-indicator">Ищем...</span>
+        </form>
+    </div>
+
+    <div id="result" class="container">
+        </div>
+</body>
+</html>

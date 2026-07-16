@@ -10,21 +10,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 public class GeocodingService {
 
-        private CacheManager cacheManager;
+    private CacheManager cacheManager;
 
     private GeoLocationRepository repository;
     private GoogleGeocodingClient googleClient;
 
     // Default constructor for test contexts where dependencies are mocked
-    public GeocodingService() {}
+    public GeocodingService() {
+    }
 
     @Autowired
-    public GeocodingService(GeoLocationRepository repository, GoogleGeocodingClient googleClient, CacheManager cacheManager) {
+    public GeocodingService(GeoLocationRepository repository, GoogleGeocodingClient googleClient,
+            CacheManager cacheManager) {
         this.repository = repository;
         this.googleClient = googleClient;
         this.cacheManager = cacheManager;
     }
-
 
     public GeocodingResult geocode(String rawAddress) {
         String address = normalize(rawAddress);
@@ -34,7 +35,8 @@ public class GeocodingService {
             if (cache != null) {
                 Cache.ValueWrapper cached = cache.get(address);
                 if (cached != null) {
-                    return (GeocodingResult) cached.get();
+                    GeocodingResult cachedResult = (GeocodingResult) cached.get();
+                    return cachedResult;
                 }
             }
         }
@@ -47,7 +49,9 @@ public class GeocodingService {
                     location.getAddress(), location.getLatitude(), location.getLongitude(), "database");
             if (cacheManager != null) {
                 Cache cache = cacheManager.getCache("geocoding");
-                if (cache != null) { cache.put(address, result); }
+                if (cache != null) {
+                    cache.put(address, result);
+                }
             }
             return result;
         }
@@ -64,7 +68,9 @@ public class GeocodingService {
                 saved.getAddress(), saved.getLatitude(), saved.getLongitude(), "google");
         if (cacheManager != null) {
             Cache cache = cacheManager.getCache("geocoding");
-            if (cache != null) { cache.put(address, result); }
+            if (cache != null) {
+                cache.put(address, result);
+            }
         }
         return result;
     }

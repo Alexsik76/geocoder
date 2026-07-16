@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <div th:fragment="mapResult">
+
+        <div th:if="${result != null}">
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <p style="margin: 0 0 10px 0;">
+                    <strong>Источник данных:</strong>
+                    <span th:text="${cacheHit ? 'cache' : result.source()}"
+                        th:style="${cacheHit ? 'color: green;' : (result.source() == 'database' ? 'color: blue;' : 'color: orange;')}">
+                    </span>
+                </p>
+                <p style="margin: 0;">
+                    <strong>Координаты:</strong>
+                    <span th:text="${result.latitude()}"></span>, <span th:text="${result.longitude()}"></span>
+                </p>
+            </div>
+
+            <iframe width="100%" height="450" style="border:1px solid #ccc; border-radius: 5px;" loading="lazy"
+                allowfullscreen
+                th:src="@{'https://maps.google.com/maps?q=' + ${result.latitude()} + ',' + ${result.longitude()} + '&hl=ru&z=14&output=embed'}">
+            </iframe>
+        </div>
+
+        <div th:if="${result == null}">
+            <p style="color: red; padding: 15px; background-color: #ffeeee; border-radius: 5px;">
+                Адрес не найден. Попробуйте уточнить запрос.
+            </p>
+        </div>
+
+    </div>
+</body>
+
+</html>
