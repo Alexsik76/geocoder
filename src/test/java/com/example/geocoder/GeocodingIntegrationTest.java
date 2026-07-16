@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -119,7 +120,9 @@ class GeocodingIntegrationTest {
 
         // Setup Cache
         GeocodingResult cachedResult = new GeocodingResult(address, 3.3, 3.3, "cache");
-        cacheManager.getCache("geocoding").put(address, cachedResult);
+        Cache cache = cacheManager.getCache("geocoding");
+        cache.put(address, cachedResult);
+        awaitCacheWriteVisible(cache, address);
 
         GeocodingResult result = service.geocode(address);
 
@@ -127,5 +130,30 @@ class GeocodingIntegrationTest {
         assertThat(result.source()).isEqualTo("cache");
         assertThat(result.latitude()).isEqualTo(3.3);
         assertThat(result.longitude()).isEqualTo(3.3);
+    }
+
+    // DefaultRedisCacheWriter.put() writes asynchronously (fire-and-forget) whenever
+    // the RedisConnectionFactory also implements ReactiveRedisConnectionFactory, which
+    // LettuceConnectionFactory does here since reactor-core is on the classpath - see
+    // DefaultRedisCacheWriter's constructor (asynchronousWrites=true in that case) and
+    // put(): `asyncCacheWriter.store(...).thenRun(...)` instead of a blocking execute().
+    // So Cache.put() can return before the value is actually visible to Cache.get().
+    // Raw RedisTemplate.opsForValue().set() is unaffected (always synchronous) and real
+    // requests never hit this window, since the write and the read happen on separate
+    // HTTP calls; only this test writes to the cache directly and reads it back with no
+    // I/O in between, so it must wait the async write out before asserting.
+    private void awaitCacheWriteVisible(Cache cache, String key) {
+        for (int attempt = 0; attempt < 50; attempt++) {
+            if (cache.get(key) != null) {
+                return;
+            }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+        }
+        throw new IllegalStateException("Cache write for key '" + key + "' did not become visible in time");
     }
 }
