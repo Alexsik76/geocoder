@@ -8,8 +8,8 @@
             <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
                 <p style="margin: 0 0 10px 0;">
                     <strong>Источник данных:</strong>
-                    <span th:text="${cacheHit ? 'cache' : result.source()}"
-                        th:style="${cacheHit ? 'color: green;' : (result.source() == 'database' ? 'color: blue;' : 'color: orange;')}">
+                    <span th:text="${result.source()}"
+                        th:style="${result.source() == 'database' ? 'color: blue;' : (result.source() == 'google' ? 'color: orange;' : 'color: green;')}">
                     </span>
                 </p>
                 <p style="margin: 0;">

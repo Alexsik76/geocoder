@@ -52,10 +52,13 @@ class GeocodingIntegrationTest {
         repository.deleteAll();
         GeocodingResult second = service.geocode(address);
 
-        assertThat(first).isNotNull();
-        assertThat(first.source()).isEqualTo("database");
-        assertThat(second).isEqualTo(first);
-        verify(googleClient, never()).geocode(address);
+            assertThat(first).isNotNull();
+            assertThat(first.source()).isEqualTo("database");
+            assertThat(second).isNotNull();
+            assertThat(second.source()).isEqualTo("cache");
+            assertThat(second.latitude()).isEqualTo(first.latitude());
+            assertThat(second.longitude()).isEqualTo(first.longitude());
+            verify(googleClient, never()).geocode(address);
     }
 
     @Test
@@ -71,10 +74,13 @@ class GeocodingIntegrationTest {
         when(googleClient.geocode(address)).thenReturn(Optional.empty());
         GeocodingResult second = service.geocode(address);
 
-        assertThat(first).isNotNull();
-        assertThat(first.source()).isEqualTo("google");
-        assertThat(second).isEqualTo(first);
-    }
+            assertThat(first).isNotNull();
+            assertThat(first.source()).isEqualTo("google");
+            assertThat(second).isNotNull();
+            assertThat(second.source()).isEqualTo("cache");
+            assertThat(second.latitude()).isEqualTo(first.latitude());
+            assertThat(second.longitude()).isEqualTo(first.longitude());
+        }
 
     @Test
     void unknownAddressGoesToGoogleAndIsPersisted() {
