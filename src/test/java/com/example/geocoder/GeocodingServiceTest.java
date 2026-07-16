@@ -5,13 +5,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.anyString;
 
 
 import java.util.Optional;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
-import org.junit.jupiter.api.BeforeEach;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,21 +24,12 @@ class GeocodingServiceTest {
     @Mock
     private GoogleGeocodingClient googleClient;
 
-    @Mock
-    private CacheManager cacheManager;
-
-    @Mock
-    private Cache cache;
+    
 
     @InjectMocks
     private GeocodingService service;
 
-    @BeforeEach
-    void setUpCache() {
-        when(cacheManager.getCache("geocoding")).thenReturn(cache);
-        // default cache miss
-        when(cache.get(anyString())).thenReturn(null);
-    }
+    
 
     @Test
     void returnsFromDatabaseWhenFound() {

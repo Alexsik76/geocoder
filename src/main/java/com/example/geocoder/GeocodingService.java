@@ -4,17 +4,21 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.Cache;
-import org.springframework.cache.annotation.Cacheable;
+
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class GeocodingService {
 
-    private final CacheManager cacheManager;
+        private CacheManager cacheManager;
 
+    private GeoLocationRepository repository;
+    private GoogleGeocodingClient googleClient;
 
-    private final GeoLocationRepository repository;
-    private final GoogleGeocodingClient googleClient;
+    // Default constructor for test contexts where dependencies are mocked
+    public GeocodingService() {}
 
+    @Autowired
     public GeocodingService(GeoLocationRepository repository, GoogleGeocodingClient googleClient, CacheManager cacheManager) {
         this.repository = repository;
         this.googleClient = googleClient;
@@ -22,24 +26,30 @@ public class GeocodingService {
     }
 
 
-
-
-    @Cacheable(value = "geocoding", unless = "#result == null")
     public GeocodingResult geocode(String rawAddress) {
         String address = normalize(rawAddress);
         // Check cache manually to ensure priority over DB and Google
-        Cache.ValueWrapper cached = cacheManager.getCache("geocoding").get(address);
-        if (cached != null) {
-            return (GeocodingResult) cached.get();
+        if (cacheManager != null) {
+            Cache cache = cacheManager.getCache("geocoding");
+            if (cache != null) {
+                Cache.ValueWrapper cached = cache.get(address);
+                if (cached != null) {
+                    return (GeocodingResult) cached.get();
+                }
+            }
         }
-
 
         // Existing DB lookup retained for when cache miss
         Optional<GeoLocation> fromDb = repository.findByAddress(address);
         if (fromDb.isPresent()) {
             GeoLocation location = fromDb.get();
-            return new GeocodingResult(
+            GeocodingResult result = new GeocodingResult(
                     location.getAddress(), location.getLatitude(), location.getLongitude(), "database");
+            if (cacheManager != null) {
+                Cache cache = cacheManager.getCache("geocoding");
+                if (cache != null) { cache.put(address, result); }
+            }
+            return result;
         }
 
         Optional<Coordinates> fromGoogle = googleClient.geocode(address);
@@ -50,8 +60,13 @@ public class GeocodingService {
         Coordinates coordinates = fromGoogle.get();
         GeoLocation saved = repository.save(
                 new GeoLocation(address, coordinates.latitude(), coordinates.longitude()));
-        return new GeocodingResult(
+        GeocodingResult result = new GeocodingResult(
                 saved.getAddress(), saved.getLatitude(), saved.getLongitude(), "google");
+        if (cacheManager != null) {
+            Cache cache = cacheManager.getCache("geocoding");
+            if (cache != null) { cache.put(address, result); }
+        }
+        return result;
     }
 
     private String normalize(String address) {
