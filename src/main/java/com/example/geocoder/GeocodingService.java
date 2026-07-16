@@ -26,34 +26,18 @@ public class GeocodingService {
 
     public GeocodingResult geocode(String rawAddress) {
         String address = normalize(rawAddress);
-        // Check cache manually to ensure priority over DB and Google
-        if (cacheManager != null) {
-            Cache cache = cacheManager.getCache("geocoding");
-            if (cache != null) {
-                Cache.ValueWrapper cached = cache.get(address);
-                if (cached != null) {
-                    GeocodingResult cachedResult = (GeocodingResult) cached.get();
-                    return new GeocodingResult(
-                            cachedResult.address(),
-                            cachedResult.latitude(),
-                            cachedResult.longitude(),
-                            "cache");
-                }
-            }
+        
+        GeocodingResult cachedResult = getFromCache(address);
+        if (cachedResult != null) {
+            return cachedResult;
         }
 
-        // Existing DB lookup retained for when cache miss
         Optional<GeoLocation> fromDb = repository.findByAddress(address);
         if (fromDb.isPresent()) {
             GeoLocation location = fromDb.get();
             GeocodingResult result = new GeocodingResult(
                     location.getAddress(), location.getLatitude(), location.getLongitude(), "database");
-            if (cacheManager != null) {
-                Cache cache = cacheManager.getCache("geocoding");
-                if (cache != null) {
-                    cache.put(address, result);
-                }
-            }
+            putToCache(address, result);
             return result;
         }
 
@@ -67,13 +51,37 @@ public class GeocodingService {
                 new GeoLocation(address, coordinates.latitude(), coordinates.longitude()));
         GeocodingResult result = new GeocodingResult(
                 saved.getAddress(), saved.getLatitude(), saved.getLongitude(), "google");
+        putToCache(address, result);
+        return result;
+    }
+
+    private GeocodingResult getFromCache(String address) {
         if (cacheManager != null) {
+            Cache cache = cacheManager.getCache("geocoding");
+            if (cache != null) {
+                Cache.ValueWrapper cached = cache.get(address);
+                if (cached != null) {
+                    GeocodingResult cachedResult = (GeocodingResult) cached.get();
+                    if (cachedResult != null) {
+                        return new GeocodingResult(
+                                cachedResult.address(),
+                                cachedResult.latitude(),
+                                cachedResult.longitude(),
+                                "cache");
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private void putToCache(String address, GeocodingResult result) {
+        if (cacheManager != null && result != null) {
             Cache cache = cacheManager.getCache("geocoding");
             if (cache != null) {
                 cache.put(address, result);
             }
         }
-        return result;
     }
 
     private String normalize(String address) {
