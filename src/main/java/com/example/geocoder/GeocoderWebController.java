@@ -1,6 +1,5 @@
 package com.example.geocoder;
 
-import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,7 +10,7 @@ public class GeocoderWebController {
 
     private final GeocodingService service;
 
-    public GeocoderWebController(GeocodingService service, CacheManager cacheManager) {
+    public GeocoderWebController(GeocodingService service) {
         this.service = service;
     }
 

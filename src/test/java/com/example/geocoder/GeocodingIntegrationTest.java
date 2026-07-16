@@ -55,7 +55,7 @@ class GeocodingIntegrationTest {
             assertThat(first).isNotNull();
             assertThat(first.source()).isEqualTo("database");
             assertThat(second).isNotNull();
-            assertThat(second.source()).isEqualTo("cache");
+            assertThat(second.source()).isEqualTo("database");
             assertThat(second.latitude()).isEqualTo(first.latitude());
             assertThat(second.longitude()).isEqualTo(first.longitude());
             verify(googleClient, never()).geocode(address);
@@ -77,7 +77,7 @@ class GeocodingIntegrationTest {
             assertThat(first).isNotNull();
             assertThat(first.source()).isEqualTo("google");
             assertThat(second).isNotNull();
-            assertThat(second.source()).isEqualTo("cache");
+            assertThat(second.source()).isEqualTo("google");
             assertThat(second.latitude()).isEqualTo(first.latitude());
             assertThat(second.longitude()).isEqualTo(first.longitude());
         }

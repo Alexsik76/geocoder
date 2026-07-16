@@ -10,21 +10,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 public class GeocodingService {
 
+    @Autowired
     private CacheManager cacheManager;
 
     private GeoLocationRepository repository;
     private GoogleGeocodingClient googleClient;
 
-    // Default constructor for test contexts where dependencies are mocked
-    public GeocodingService() {
-    }
+
 
     @Autowired
-    public GeocodingService(GeoLocationRepository repository, GoogleGeocodingClient googleClient,
-            CacheManager cacheManager) {
+    public GeocodingService(GeoLocationRepository repository, GoogleGeocodingClient googleClient) {
         this.repository = repository;
         this.googleClient = googleClient;
-        this.cacheManager = cacheManager;
     }
 
     public GeocodingResult geocode(String rawAddress) {
