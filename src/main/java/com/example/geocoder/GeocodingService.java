@@ -16,26 +16,26 @@ public class GeocodingService {
     }
 
     @Cacheable(value = "geocoding", unless = "#result == null")
-    public Optional<GeocodingResult> geocode(String rawAddress) {
+    public GeocodingResult geocode(String rawAddress) {
         String address = normalize(rawAddress);
 
         Optional<GeoLocation> fromDb = repository.findByAddress(address);
         if (fromDb.isPresent()) {
             GeoLocation location = fromDb.get();
-            return Optional.of(new GeocodingResult(
-                    location.getAddress(), location.getLatitude(), location.getLongitude(), "database"));
+            return new GeocodingResult(
+                    location.getAddress(), location.getLatitude(), location.getLongitude(), "database");
         }
 
         Optional<Coordinates> fromGoogle = googleClient.geocode(address);
         if (fromGoogle.isEmpty()) {
-            return Optional.empty();
+            return null;
         }
 
         Coordinates coordinates = fromGoogle.get();
         GeoLocation saved = repository.save(
                 new GeoLocation(address, coordinates.latitude(), coordinates.longitude()));
-        return Optional.of(new GeocodingResult(
-                saved.getAddress(), saved.getLatitude(), saved.getLongitude(), "google"));
+        return new GeocodingResult(
+                saved.getAddress(), saved.getLatitude(), saved.getLongitude(), "google");
     }
 
     private String normalize(String address) {

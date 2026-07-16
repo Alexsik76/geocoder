@@ -5,7 +5,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -24,7 +23,7 @@ class GeocodingControllerTest {
     @Test
     void returnsOkWithResultWhenFound() throws Exception {
         when(service.geocode("Kyiv, Ukraine")).thenReturn(
-                Optional.of(new GeocodingResult("Kyiv, Ukraine", 50.4501, 30.5234, "database")));
+                new GeocodingResult("Kyiv, Ukraine", 50.4501, 30.5234, "database"));
 
         mockMvc.perform(get("/api/geocode").param("address", "Kyiv, Ukraine"))
                 .andExpect(status().isOk())
@@ -34,7 +33,7 @@ class GeocodingControllerTest {
 
     @Test
     void returnsNotFoundWhenAddressUnknown() throws Exception {
-        when(service.geocode("Nowhere")).thenReturn(Optional.empty());
+        when(service.geocode("Nowhere")).thenReturn(null);
 
         mockMvc.perform(get("/api/geocode").param("address", "Nowhere"))
                 .andExpect(status().isNotFound());

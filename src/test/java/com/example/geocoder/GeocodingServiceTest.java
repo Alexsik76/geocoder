@@ -30,11 +30,11 @@ class GeocodingServiceTest {
         when(repository.findByAddress("Kyiv, Ukraine"))
                 .thenReturn(Optional.of(new GeoLocation("Kyiv, Ukraine", 50.4501, 30.5234)));
 
-        Optional<GeocodingResult> result = service.geocode("Kyiv, Ukraine");
+        GeocodingResult result = service.geocode("Kyiv, Ukraine");
 
-        assertThat(result).isPresent();
-        assertThat(result.get().source()).isEqualTo("database");
-        assertThat(result.get().latitude()).isEqualTo(50.4501);
+        assertThat(result).isNotNull();
+        assertThat(result.source()).isEqualTo("database");
+        assertThat(result.latitude()).isEqualTo(50.4501);
         verify(googleClient, never()).geocode(any());
     }
 
@@ -46,22 +46,22 @@ class GeocodingServiceTest {
         when(repository.save(any(GeoLocation.class)))
                 .thenReturn(new GeoLocation("Lviv, Ukraine", 49.8397, 24.0297));
 
-        Optional<GeocodingResult> result = service.geocode("Lviv, Ukraine");
+        GeocodingResult result = service.geocode("Lviv, Ukraine");
 
-        assertThat(result).isPresent();
-        assertThat(result.get().source()).isEqualTo("google");
-        assertThat(result.get().longitude()).isEqualTo(24.0297);
+        assertThat(result).isNotNull();
+        assertThat(result.source()).isEqualTo("google");
+        assertThat(result.longitude()).isEqualTo(24.0297);
         verify(repository).save(any(GeoLocation.class));
     }
 
     @Test
-    void returnsEmptyWhenNotFoundAnywhere() {
+    void returnsNullWhenNotFoundAnywhere() {
         when(repository.findByAddress("Nowhere")).thenReturn(Optional.empty());
         when(googleClient.geocode("Nowhere")).thenReturn(Optional.empty());
 
-        Optional<GeocodingResult> result = service.geocode("Nowhere");
+        GeocodingResult result = service.geocode("Nowhere");
 
-        assertThat(result).isEmpty();
+        assertThat(result).isNull();
         verify(repository, never()).save(any());
     }
 
@@ -70,9 +70,9 @@ class GeocodingServiceTest {
         when(repository.findByAddress("Kyiv, Ukraine"))
                 .thenReturn(Optional.of(new GeoLocation("Kyiv, Ukraine", 50.4501, 30.5234)));
 
-        Optional<GeocodingResult> result = service.geocode("  Kyiv, Ukraine  ");
+        GeocodingResult result = service.geocode("  Kyiv, Ukraine  ");
 
-        assertThat(result).isPresent();
+        assertThat(result).isNotNull();
         verify(repository).findByAddress("Kyiv, Ukraine");
     }
 }

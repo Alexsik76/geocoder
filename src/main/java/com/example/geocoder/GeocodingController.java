@@ -1,6 +1,5 @@
 package com.example.geocoder;
 
-import java.util.Optional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,9 +16,9 @@ public class GeocodingController {
 
     @GetMapping("/api/geocode")
     public ResponseEntity<GeocodingResult> geocode(@RequestParam String address) {
-        Optional<GeocodingResult> result = service.geocode(address);
-        return result
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        GeocodingResult result = service.geocode(address);
+        return result != null
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.notFound().build();
     }
 }
