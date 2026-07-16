@@ -10,11 +10,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class GeocoderWebController {
 
     private final GeocodingService service;
-    private final CacheManager cacheManager;
 
     public GeocoderWebController(GeocodingService service, CacheManager cacheManager) {
         this.service = service;
-        this.cacheManager = cacheManager;
     }
 
     @GetMapping("/")
