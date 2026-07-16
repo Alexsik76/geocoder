@@ -2,12 +2,17 @@ package com.example.geocoder;
 
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 @Component
 public class GoogleGeocodingClient {
+
+    private static final Logger log = LoggerFactory.getLogger(GoogleGeocodingClient.class);
 
     private static final String BASE_URL = "https://maps.googleapis.com/maps/api/geocode/json";
 
@@ -21,13 +26,20 @@ public class GoogleGeocodingClient {
     }
 
     public Optional<Coordinates> geocode(String address) {
-        GeocodingResponse response = restClient.get()
-                .uri(BASE_URL, uri -> uri
-                        .queryParam("address", address)
-                        .queryParam("key", apiKey)
-                        .build())
-                .retrieve()
-                .body(GeocodingResponse.class);
+        GeocodingResponse response;
+        try {
+            response = restClient.get()
+                    .uri(BASE_URL, uri -> uri
+                            .queryParam("address", address)
+                            .queryParam("key", apiKey)
+                            .build())
+                    .retrieve()
+                    .body(GeocodingResponse.class);
+        } catch (RestClientException e) {
+            log.warn("Google Geocoding API call failed for address '{}': {}: {}",
+                    address, e.getClass().getSimpleName(), e.getMessage());
+            return Optional.empty();
+        }
 
         if (response == null || !"OK".equals(response.status()) || response.results().isEmpty()) {
             return Optional.empty();

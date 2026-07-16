@@ -16,6 +16,9 @@ public class GeocodingController {
 
     @GetMapping("/api/geocode")
     public ResponseEntity<GeocodingResult> geocode(@RequestParam String address) {
+        if (address.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
         GeocodingResult result = service.geocode(address);
         return result != null
                 ? ResponseEntity.ok(result)

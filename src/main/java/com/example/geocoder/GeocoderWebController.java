@@ -30,7 +30,7 @@ public class GeocoderWebController {
     @GetMapping("/ui/geocode")
     public String getMapFragment(@RequestParam String address, Model model,
             HttpServletResponse response) {
-        GeocodingResult result = service.geocode(address);
+        GeocodingResult result = address.isBlank() ? null : service.geocode(address);
         model.addAttribute("result", result);
         response.setHeader("HX-Trigger", "geocodeDone");
         return "fragments/map :: mapResult";

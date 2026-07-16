@@ -48,4 +48,10 @@ class GeocodingControllerTest {
         mockMvc.perform(get("/api/geocode"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void returnsBadRequestWhenAddressBlank() throws Exception {
+        mockMvc.perform(get("/api/geocode").param("address", "   "))
+                .andExpect(status().isBadRequest());
+    }
 }

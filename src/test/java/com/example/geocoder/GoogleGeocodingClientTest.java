@@ -3,6 +3,7 @@ package com.example.geocoder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.util.Optional;
@@ -57,6 +58,17 @@ class GoogleGeocodingClientTest {
                 .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
 
         Optional<Coordinates> result = client.geocode("Nonexistent place");
+
+        assertThat(result).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void returnsEmptyInsteadOfThrowingWhenGoogleRespondsWithError() {
+        server.expect(method(HttpMethod.GET))
+                .andRespond(withBadRequest());
+
+        Optional<Coordinates> result = client.geocode("");
 
         assertThat(result).isEmpty();
         server.verify();
