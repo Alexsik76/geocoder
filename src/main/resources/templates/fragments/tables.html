@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <div th:fragment="dataTables" style="display: flex; gap: 20px; margin-top: 20px;">
+
+        <div style="flex: 1;">
+            <h3 style="margin: 0 0 10px 0;">Cache (Redis)</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="background-color: #f0f0f0;">
+                        <th style="text-align: left; padding: 6px; border: 1px solid #ddd;">Address</th>
+                        <th style="text-align: right; padding: 6px; border: 1px solid #ddd;">Lat</th>
+                        <th style="text-align: right; padding: 6px; border: 1px solid #ddd;">Lng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entry : ${cacheEntries}">
+                        <td style="padding: 6px; border: 1px solid #ddd;" th:text="${entry.address()}"></td>
+                        <td style="text-align: right; padding: 6px; border: 1px solid #ddd;" th:text="${entry.latitude()}"></td>
+                        <td style="text-align: right; padding: 6px; border: 1px solid #ddd;" th:text="${entry.longitude()}"></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(cacheEntries)}">
+                        <td colspan="3" style="padding: 6px; color: #888;">empty</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="flex: 1;">
+            <h3 style="margin: 0 0 10px 0;">Database (PostgreSQL)</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="background-color: #f0f0f0;">
+                        <th style="text-align: left; padding: 6px; border: 1px solid #ddd;">Address</th>
+                        <th style="text-align: right; padding: 6px; border: 1px solid #ddd;">Lat</th>
+                        <th style="text-align: right; padding: 6px; border: 1px solid #ddd;">Lng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entry : ${dbEntries}">
+                        <td style="padding: 6px; border: 1px solid #ddd;" th:text="${entry.address}"></td>
+                        <td style="text-align: right; padding: 6px; border: 1px solid #ddd;" th:text="${entry.latitude}"></td>
+                        <td style="text-align: right; padding: 6px; border: 1px solid #ddd;" th:text="${entry.longitude}"></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(dbEntries)}">
+                        <td colspan="3" style="padding: 6px; color: #888;">empty</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</body>
+
+</html>
