@@ -2,6 +2,7 @@ package com.example.geocoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,6 +15,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.RedisConnectionFailureException;
 
 @ExtendWith(MockitoExtension.class)
 class GeocodingServiceTest {
@@ -24,12 +28,16 @@ class GeocodingServiceTest {
     @Mock
     private GoogleGeocodingClient googleClient;
 
-    
+    @Mock
+    private CacheManager cacheManager;
+
+    @Mock
+    private Cache cache;
 
     @InjectMocks
     private GeocodingService service;
 
-    
+
 
     @Test
     void returnsFromDatabaseWhenFound() {
@@ -80,5 +88,22 @@ class GeocodingServiceTest {
 
         assertThat(result).isNotNull();
         verify(repository).findByAddress("Kyiv, Ukraine");
+    }
+
+    @Test
+    void fallsBackToDatabaseWhenCacheIsUnavailable() {
+        when(cacheManager.getCache("geocoding")).thenReturn(cache);
+        when(cache.get("Kyiv, Ukraine"))
+                .thenThrow(new RedisConnectionFailureException("Unable to connect to Redis"));
+        doThrow(new RedisConnectionFailureException("Unable to connect to Redis"))
+                .when(cache).put(any(), any());
+        when(repository.findByAddress("Kyiv, Ukraine"))
+                .thenReturn(Optional.of(new GeoLocation("Kyiv, Ukraine", 50.4501, 30.5234)));
+
+        GeocodingResult result = service.geocode("Kyiv, Ukraine");
+
+        assertThat(result).isNotNull();
+        assertThat(result.source()).isEqualTo("database");
+        assertThat(result.latitude()).isEqualTo(50.4501);
     }
 }

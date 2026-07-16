@@ -1,6 +1,8 @@
 package com.example.geocoder;
 
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.Cache;
@@ -9,6 +11,8 @@ import org.springframework.cache.Cache;
 
 @Service
 public class GeocodingService {
+
+    private static final Logger log = LoggerFactory.getLogger(GeocodingService.class);
 
     private final CacheManager cacheManager;
 
@@ -56,31 +60,43 @@ public class GeocodingService {
     }
 
     private GeocodingResult getFromCache(String address) {
-        if (cacheManager != null) {
-            Cache cache = cacheManager.getCache("geocoding");
-            if (cache != null) {
-                Cache.ValueWrapper cached = cache.get(address);
-                if (cached != null) {
-                    GeocodingResult cachedResult = (GeocodingResult) cached.get();
-                    if (cachedResult != null) {
-                        return new GeocodingResult(
-                                cachedResult.address(),
-                                cachedResult.latitude(),
-                                cachedResult.longitude(),
-                                "cache");
+        try {
+            if (cacheManager != null) {
+                Cache cache = cacheManager.getCache("geocoding");
+                if (cache != null) {
+                    Cache.ValueWrapper cached = cache.get(address);
+                    if (cached != null) {
+                        GeocodingResult cachedResult = (GeocodingResult) cached.get();
+                        if (cachedResult != null) {
+                            return new GeocodingResult(
+                                    cachedResult.address(),
+                                    cachedResult.latitude(),
+                                    cachedResult.longitude(),
+                                    "cache");
+                        }
                     }
                 }
             }
+        } catch (RuntimeException e) {
+            log.warn("Cache read failed, falling back to database/Google: {}: {}",
+                    e.getClass().getSimpleName(), e.getMessage());
+            log.debug("Cache read failure details", e);
         }
         return null;
     }
 
     private void putToCache(String address, GeocodingResult result) {
-        if (cacheManager != null && result != null) {
-            Cache cache = cacheManager.getCache("geocoding");
-            if (cache != null) {
-                cache.put(address, result);
+        try {
+            if (cacheManager != null && result != null) {
+                Cache cache = cacheManager.getCache("geocoding");
+                if (cache != null) {
+                    cache.put(address, result);
+                }
             }
+        } catch (RuntimeException e) {
+            log.warn("Cache write failed, result will not be cached: {}: {}",
+                    e.getClass().getSimpleName(), e.getMessage());
+            log.debug("Cache write failure details", e);
         }
     }
 
