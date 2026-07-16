@@ -42,7 +42,7 @@ class GeocodingIntegrationTest {
         cacheManager.getCache("geocoding").clear();
     }
 
-    @Test
+     @Test
     void secondCallIsServedFromCacheAfterDatabaseLookup() {
         String address = "Db Entry " + UUID.randomUUID();
         repository.save(new GeoLocation(address, 11.11, 22.22));
@@ -52,13 +52,13 @@ class GeocodingIntegrationTest {
         repository.deleteAll();
         GeocodingResult second = service.geocode(address);
 
-            assertThat(first).isNotNull();
-            assertThat(first.source()).isEqualTo("database");
-            assertThat(second).isNotNull();
-            assertThat(second.source()).isEqualTo("database");
-            assertThat(second.latitude()).isEqualTo(first.latitude());
-            assertThat(second.longitude()).isEqualTo(first.longitude());
-            verify(googleClient, never()).geocode(address);
+        assertThat(first).isNotNull();
+        assertThat(first.source()).isEqualTo("database");
+        assertThat(second).isNotNull();
+        assertThat(second.source()).isEqualTo("cache");
+        assertThat(second.latitude()).isEqualTo(first.latitude());
+        assertThat(second.longitude()).isEqualTo(first.longitude());
+        verify(googleClient, never()).geocode(address);
     }
 
     @Test
@@ -77,7 +77,7 @@ class GeocodingIntegrationTest {
             assertThat(first).isNotNull();
             assertThat(first.source()).isEqualTo("google");
             assertThat(second).isNotNull();
-            assertThat(second.source()).isEqualTo("google");
+            assertThat(second.source()).isEqualTo("cache");
             assertThat(second.latitude()).isEqualTo(first.latitude());
             assertThat(second.longitude()).isEqualTo(first.longitude());
         }

@@ -5,23 +5,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.Cache;
 
-import org.springframework.beans.factory.annotation.Autowired;
+
 
 @Service
 public class GeocodingService {
 
-    @Autowired
-    private CacheManager cacheManager;
+    private final CacheManager cacheManager;
 
     private GeoLocationRepository repository;
     private GoogleGeocodingClient googleClient;
 
 
 
-    @Autowired
-    public GeocodingService(GeoLocationRepository repository, GoogleGeocodingClient googleClient) {
+
+    public GeocodingService(CacheManager cacheManager, GeoLocationRepository repository, GoogleGeocodingClient googleClient) {
         this.repository = repository;
         this.googleClient = googleClient;
+        this.cacheManager = cacheManager;
     }
 
     public GeocodingResult geocode(String rawAddress) {
@@ -33,7 +33,11 @@ public class GeocodingService {
                 Cache.ValueWrapper cached = cache.get(address);
                 if (cached != null) {
                     GeocodingResult cachedResult = (GeocodingResult) cached.get();
-                    return cachedResult;
+                    return new GeocodingResult(
+                            cachedResult.address(),
+                            cachedResult.latitude(),
+                            cachedResult.longitude(),
+                            "cache");
                 }
             }
         }

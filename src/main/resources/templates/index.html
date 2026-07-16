@@ -14,13 +14,13 @@
     </style>
 </head>
 <body>
-    <h2>Геокодер (Тестовое задание)</h2>
+    <h2>Geocoder</h2>
     
     <div class="container">
         <form hx-get="/ui/geocode" hx-target="#result" hx-indicator="#loading" onsubmit="event.preventDefault();">
-            <input type="text" name="address" placeholder="Введите адрес, например: Kyiv" required>
-            <button type="submit">Найти координаты</button>
-            <span id="loading" class="htmx-indicator">Ищем...</span>
+            <input type="text" name="address" placeholder="Enter an address, e.g.: Kyiv" required>
+            <button type="submit">Find coordinates</button>
+            <span id="loading" class="htmx-indicator">Searching...</span>
         </form>
     </div>
 
