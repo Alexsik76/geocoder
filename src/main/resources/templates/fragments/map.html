@@ -4,7 +4,13 @@
 <body>
     <div th:fragment="mapResult">
 
-        <div th:if="${result != null}">
+        <div th:if="${blankInput}">
+            <p style="color: #7a5900; padding: 15px; background-color: #fff8e1; border-radius: 5px;">
+                Please enter an address.
+            </p>
+        </div>
+
+        <div th:if="${!blankInput and result != null}">
             <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
                 <p style="margin: 0 0 10px 0;">
                     <strong>Data source:</strong>
@@ -24,7 +30,7 @@
             </iframe>
         </div>
 
-        <div th:if="${result == null}">
+        <div th:if="${!blankInput and result == null}">
             <p style="color: red; padding: 15px; background-color: #ffeeee; border-radius: 5px;">
                 Address not found. Please refine your query.
             </p>

@@ -30,8 +30,10 @@ public class GeocoderWebController {
     @GetMapping("/ui/geocode")
     public String getMapFragment(@RequestParam String address, Model model,
             HttpServletResponse response) {
-        GeocodingResult result = address.isBlank() ? null : service.geocode(address);
+        boolean blankInput = address.isBlank();
+        GeocodingResult result = blankInput ? null : service.geocode(address);
         model.addAttribute("result", result);
+        model.addAttribute("blankInput", blankInput);
         response.setHeader("HX-Trigger", "geocodeDone");
         return "fragments/map :: mapResult";
     }

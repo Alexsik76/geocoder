@@ -15,7 +15,11 @@
 </head>
 <body>
     <h2>Geocoder</h2>
-    
+
+    <div id="error-banner" style="display: none; color: red; padding: 15px; background-color: #ffeeee; border: 1px solid red; border-radius: 5px; margin-top: 20px;">
+        Service is temporarily unavailable. Please try again later.
+    </div>
+
     <div class="container">
         <form hx-get="/ui/geocode" hx-target="#result" hx-indicator="#loading" onsubmit="event.preventDefault();">
             <input type="text" name="address" placeholder="Enter an address, e.g.: Kyiv" required>
@@ -27,5 +31,16 @@
     <div id="result" class="container">
         </div>
         <div hx-get="/ui/tables" hx-trigger="load, geocodeDone from:body" hx-swap="innerHTML"></div>
+
+    <script>
+        document.body.addEventListener('htmx:responseError', function () {
+            document.getElementById('error-banner').style.display = 'block';
+        });
+        document.body.addEventListener('htmx:afterOnLoad', function (evt) {
+            if (evt.detail.successful) {
+                document.getElementById('error-banner').style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>
