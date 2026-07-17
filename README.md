@@ -1,5 +1,5 @@
 # Geocoder Service
-
+![CI](https://github.com/Alexsik76/geocoder/actions/workflows/ci.yml/badge.svg)
 A Spring Boot-based geocoding backend service that resolves address search queries into coordinates (latitude and longitude). It uses a tiered lookup strategy to optimize response times and manage third-party API usage: Redis cache → PostgreSQL database → Google Geocoding API, persisting new results to the database and caching them.
 
 The resolution workflow is as follows:
