@@ -52,9 +52,11 @@ public class GoogleGeocodingClient {
         return Optional.of(new Coordinates(location.lat(), location.lng()));
     }
 
-    // Invoked by the resilience4j retry proxy once all retry attempts for a
-    // ResourceAccessException (connect/read timeout) are exhausted, so a transient
-    // Google outage still degrades to "address not resolved" instead of a 500.
+    // Invoked reflectively by the resilience4j retry proxy (see fallbackMethod above)
+    // once all retry attempts for a ResourceAccessException (connect/read timeout) are
+    // exhausted, so a transient Google outage still degrades to "address not resolved"
+    // instead of a 500. Not called directly, hence the "unused" warning suppression.
+    @SuppressWarnings("unused")
     private Optional<Coordinates> geocodeFallback(String address, ResourceAccessException e) {
         log.warn("Google Geocoding API unreachable for address '{}' after retries: {}: {}",
                 address, e.getClass().getSimpleName(), e.getMessage());
