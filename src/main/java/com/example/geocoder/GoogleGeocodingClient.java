@@ -1,13 +1,15 @@
 package com.example.geocoder;
 
+import io.github.resilience4j.retry.annotation.Retry;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 public class GoogleGeocodingClient {
@@ -25,6 +27,7 @@ public class GoogleGeocodingClient {
         this.apiKey = apiKey;
     }
 
+    @Retry(name = "google", fallbackMethod = "geocodeFallback")
     public Optional<Coordinates> geocode(String address) {
         GeocodingResponse response;
         try {
@@ -35,7 +38,7 @@ public class GoogleGeocodingClient {
                             .build())
                     .retrieve()
                     .body(GeocodingResponse.class);
-        } catch (RestClientException e) {
+        } catch (RestClientResponseException e) {
             log.warn("Google Geocoding API call failed for address '{}': {}: {}",
                     address, e.getClass().getSimpleName(), e.getMessage());
             return Optional.empty();
@@ -47,6 +50,15 @@ public class GoogleGeocodingClient {
 
         GeocodingResponse.Location location = response.results().get(0).geometry().location();
         return Optional.of(new Coordinates(location.lat(), location.lng()));
+    }
+
+    // Invoked by the resilience4j retry proxy once all retry attempts for a
+    // ResourceAccessException (connect/read timeout) are exhausted, so a transient
+    // Google outage still degrades to "address not resolved" instead of a 500.
+    private Optional<Coordinates> geocodeFallback(String address, ResourceAccessException e) {
+        log.warn("Google Geocoding API unreachable for address '{}' after retries: {}: {}",
+                address, e.getClass().getSimpleName(), e.getMessage());
+        return Optional.empty();
     }
 
     record GeocodingResponse(String status, List<Result> results) {
