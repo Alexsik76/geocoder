@@ -45,7 +45,7 @@ class GeocodingIntegrationTest {
 
      @Test
     void secondCallIsServedFromCacheAfterDatabaseLookup() {
-        String address = "Db Entry " + UUID.randomUUID();
+        String address = ("db entry " + UUID.randomUUID()).toLowerCase();
         repository.save(new GeoLocation(address, 11.11, 22.22));
 
         GeocodingResult first = service.geocode(address);
@@ -64,7 +64,7 @@ class GeocodingIntegrationTest {
 
     @Test
     void secondCallIsServedFromCacheAfterGoogleLookup() {
-        String address = "Google Entry " + UUID.randomUUID();
+        String address = ("google entry " + UUID.randomUUID()).toLowerCase();
         when(googleClient.geocode(address))
                 .thenReturn(Optional.of(new Coordinates(1.0, 2.0)));
 
@@ -85,7 +85,7 @@ class GeocodingIntegrationTest {
 
     @Test
     void unknownAddressGoesToGoogleAndIsPersisted() {
-        String address = "New Place " + UUID.randomUUID();
+        String address = ("new place " + UUID.randomUUID()).toLowerCase();
         when(googleClient.geocode(address))
                 .thenReturn(Optional.of(new Coordinates(46.4825, 30.7233)));
 
@@ -98,7 +98,7 @@ class GeocodingIntegrationTest {
 
     @Test
     void addressUnknownEverywhereReturnsNullAndIsNotPersisted() {
-        String address = "Nowhere " + UUID.randomUUID();
+        String address = ("nowhere " + UUID.randomUUID()).toLowerCase();
         when(googleClient.geocode(address)).thenReturn(Optional.empty());
 
         GeocodingResult result = service.geocode(address);
@@ -109,7 +109,7 @@ class GeocodingIntegrationTest {
 
     @Test
     void cacheHasHighestPriorityOverDatabaseAndGoogle() {
-        String address = "Priority Test " + UUID.randomUUID();
+        String address = ("priority test " + UUID.randomUUID()).toLowerCase();
 
         // Setup Google Client
         when(googleClient.geocode(address))

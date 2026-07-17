@@ -41,8 +41,8 @@ class GeocodingServiceTest {
 
     @Test
     void returnsFromDatabaseWhenFound() {
-        when(repository.findByAddress("Kyiv, Ukraine"))
-                .thenReturn(Optional.of(new GeoLocation("Kyiv, Ukraine", 50.4501, 30.5234)));
+        when(repository.findByAddress("kyiv ukraine"))
+                .thenReturn(Optional.of(new GeoLocation("kyiv ukraine", 50.4501, 30.5234)));
 
         GeocodingResult result = service.geocode("Kyiv, Ukraine");
 
@@ -54,11 +54,11 @@ class GeocodingServiceTest {
 
     @Test
     void fetchesFromGoogleAndSavesWhenNotInDatabase() {
-        when(repository.findByAddress("Lviv, Ukraine")).thenReturn(Optional.empty());
+        when(repository.findByAddress("lviv ukraine")).thenReturn(Optional.empty());
         when(googleClient.geocode("Lviv, Ukraine"))
                 .thenReturn(Optional.of(new Coordinates(49.8397, 24.0297)));
         when(repository.save(any(GeoLocation.class)))
-                .thenReturn(new GeoLocation("Lviv, Ukraine", 49.8397, 24.0297));
+                .thenReturn(new GeoLocation("lviv ukraine", 49.8397, 24.0297));
 
         GeocodingResult result = service.geocode("Lviv, Ukraine");
 
@@ -70,7 +70,7 @@ class GeocodingServiceTest {
 
     @Test
     void returnsNullWhenNotFoundAnywhere() {
-        when(repository.findByAddress("Nowhere")).thenReturn(Optional.empty());
+        when(repository.findByAddress("nowhere")).thenReturn(Optional.empty());
         when(googleClient.geocode("Nowhere")).thenReturn(Optional.empty());
 
         GeocodingResult result = service.geocode("Nowhere");
@@ -81,29 +81,56 @@ class GeocodingServiceTest {
 
     @Test
     void trimsWhitespaceBeforeLookup() {
-        when(repository.findByAddress("Kyiv, Ukraine"))
-                .thenReturn(Optional.of(new GeoLocation("Kyiv, Ukraine", 50.4501, 30.5234)));
+        when(repository.findByAddress("kyiv ukraine"))
+                .thenReturn(Optional.of(new GeoLocation("kyiv ukraine", 50.4501, 30.5234)));
 
         GeocodingResult result = service.geocode("  Kyiv, Ukraine  ");
 
         assertThat(result).isNotNull();
-        verify(repository).findByAddress("Kyiv, Ukraine");
+        verify(repository).findByAddress("kyiv ukraine");
     }
 
     @Test
     void fallsBackToDatabaseWhenCacheIsUnavailable() {
         when(cacheManager.getCache("geocoding")).thenReturn(cache);
-        when(cache.get("Kyiv, Ukraine"))
+        when(cache.get("kyiv ukraine"))
                 .thenThrow(new RedisConnectionFailureException("Unable to connect to Redis"));
         doThrow(new RedisConnectionFailureException("Unable to connect to Redis"))
                 .when(cache).put(any(), any());
-        when(repository.findByAddress("Kyiv, Ukraine"))
-                .thenReturn(Optional.of(new GeoLocation("Kyiv, Ukraine", 50.4501, 30.5234)));
+        when(repository.findByAddress("kyiv ukraine"))
+                .thenReturn(Optional.of(new GeoLocation("kyiv ukraine", 50.4501, 30.5234)));
 
         GeocodingResult result = service.geocode("Kyiv, Ukraine");
 
         assertThat(result).isNotNull();
         assertThat(result.source()).isEqualTo("database");
         assertThat(result.latitude()).isEqualTo(50.4501);
+    }
+
+    @Test
+    void normalizationResolvesDifferentSpellingsToSameDbQuery() {
+        when(repository.findByAddress("kyiv ukraine"))
+                .thenReturn(Optional.of(new GeoLocation("kyiv ukraine", 50.4501, 30.5234)));
+
+        service.geocode("Kyiv, Ukraine");
+        service.geocode("kyiv  ukraine");
+        service.geocode("  KYIV, UKRAINE  ");
+
+        verify(repository, org.mockito.Mockito.times(3)).findByAddress("kyiv ukraine");
+    }
+
+    @Test
+    void googleGeocodeReceivesTrimmedOriginalInput() {
+        when(repository.findByAddress("kyiv ukraine")).thenReturn(Optional.empty());
+        when(googleClient.geocode("Kyiv, Ukraine"))
+                .thenReturn(Optional.of(new Coordinates(50.4501, 30.5234)));
+        when(repository.save(any(GeoLocation.class)))
+                .thenReturn(new GeoLocation("kyiv ukraine", 50.4501, 30.5234));
+
+        service.geocode("  Kyiv, Ukraine  ");
+
+        org.mockito.ArgumentCaptor<String> captor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(googleClient).geocode(captor.capture());
+        assertThat(captor.getValue()).isEqualTo("Kyiv, Ukraine");
     }
 }

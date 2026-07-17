@@ -1,6 +1,7 @@
 package com.example.geocoder;
 
 import java.util.Optional;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -29,33 +30,34 @@ public class GeocodingService {
     }
 
     public GeocodingResult geocode(String rawAddress) {
-        String address = normalize(rawAddress);
+        String normalizedAddress = normalize(rawAddress);
         
-        GeocodingResult cachedResult = getFromCache(address);
+        GeocodingResult cachedResult = getFromCache(normalizedAddress);
         if (cachedResult != null) {
             return cachedResult;
         }
 
-        Optional<GeoLocation> fromDb = repository.findByAddress(address);
+        Optional<GeoLocation> fromDb = repository.findByAddress(normalizedAddress);
         if (fromDb.isPresent()) {
             GeoLocation location = fromDb.get();
             GeocodingResult result = new GeocodingResult(
                     location.getAddress(), location.getLatitude(), location.getLongitude(), "database");
-            putToCache(address, result);
+            putToCache(normalizedAddress, result);
             return result;
         }
 
-        Optional<Coordinates> fromGoogle = googleClient.geocode(address);
+        String originalTrimmed = rawAddress == null ? "" : rawAddress.trim();
+        Optional<Coordinates> fromGoogle = googleClient.geocode(originalTrimmed);
         if (fromGoogle.isEmpty()) {
             return null;
         }
 
         Coordinates coordinates = fromGoogle.get();
         GeoLocation saved = repository.save(
-                new GeoLocation(address, coordinates.latitude(), coordinates.longitude()));
+                new GeoLocation(normalizedAddress, coordinates.latitude(), coordinates.longitude()));
         GeocodingResult result = new GeocodingResult(
                 saved.getAddress(), saved.getLatitude(), saved.getLongitude(), "google");
-        putToCache(address, result);
+        putToCache(normalizedAddress, result);
         return result;
     }
 
@@ -101,6 +103,13 @@ public class GeocodingService {
     }
 
     private String normalize(String address) {
-        return address == null ? "" : address.trim();
+        if (address == null) {
+            return "";
+        }
+        return address.toLowerCase(Locale.ROOT)
+                .replace(',', ' ')
+                .replace('.', ' ')
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 }
