@@ -1,5 +1,7 @@
 # Geocoder Service
+
 ![CI](https://github.com/Alexsik76/geocoder/actions/workflows/ci.yml/badge.svg)
+
 A Spring Boot-based geocoding backend service that resolves address search queries into coordinates (latitude and longitude). It uses a tiered lookup strategy to optimize response times and manage third-party API usage: Redis cache → PostgreSQL database → Google Geocoding API, persisting new results to the database and caching them.
 
 The resolution workflow is as follows:
@@ -109,5 +111,37 @@ Test coverage includes plain unit tests (Mockito), `@WebMvcTest` slices, `@Sprin
 - **Spring Boot Actuator** for health reporting
 - **Thymeleaf + HTMX** for the web UI
 - **Testcontainers**, **JUnit 5**, **Mockito**, **AssertJ** for testing
+
+## Possible improvements
+
+**Address normalization.** Input is currently normalized only by trimming
+surrounding whitespace, so different spellings of the same address create
+separate cache and database records — for example,
+"Yerusalymka St, Vinnytsia" and "Vinnytsia, Yerusalymka St" are stored
+independently. A safe first step would be to also lowercase the input,
+strip punctuation, and collapse internal whitespace; this merges trivial
+variations without risk. It would not, however, merge different word
+orderings, and stronger local heuristics such as token sorting are
+intentionally avoided: reordering words discards positional meaning and
+causes false merges where order is significant
+(e.g. "Lvivska St, Kyiv" vs "Kyivska St, Lviv"), and a false merge
+returns wrong coordinates silently, which is worse than a duplicate.
+
+Correctly canonicalizing arbitrary address strings requires knowing the
+role of each token (city, street, house number, region), which is the
+domain of a dedicated address parser. In a production system this class
+of problem is solved by normalizing input through a library such as
+libpostal before the cache lookup, eliminating duplicate records
+entirely. That was left out here to avoid a heavy native dependency
+(multi-gigabyte models, JNI bindings) that is disproportionate for a
+test task.
+
+**Resilience.** A retry on transient Google API failures is implemented
+via Resilience4j. A circuit breaker (to stop calling Google while it is
+down) would be the next step for a production deployment.
+
+**Observability.** An Actuator health endpoint exposes database and Redis
+status. Exporting metrics to Prometheus and structured logging would
+complete the production monitoring story.
 
 > **Note on dependency naming under Spring Boot 4**: this project uses `resilience4j-spring-boot3` because `resilience4j-spring-boot4` is not yet published to Maven Central (tracked upstream in [resilience4j#2427](https://github.com/resilience4j/resilience4j/issues/2427)); it works fine against Boot 4.1 in practice. The AOP starter needed for `@Retry` is `spring-boot-starter-aspectj`, not `spring-boot-starter-aop` (renamed in Boot 4).
