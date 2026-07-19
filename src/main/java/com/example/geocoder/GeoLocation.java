@@ -48,4 +48,8 @@ public class GeoLocation {
     public Double getLongitude() {
         return longitude;
     }
+
+    public Location toLocation() {
+        return new Location(address, latitude, longitude);
+    }
 }

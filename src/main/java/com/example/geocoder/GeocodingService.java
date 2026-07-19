@@ -8,8 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.Cache;
 
-
-
 @Service
 public class GeocodingService {
 
@@ -20,10 +18,8 @@ public class GeocodingService {
     private final GeoLocationRepository repository;
     private final GoogleGeocodingClient googleClient;
 
-
-
-
-    public GeocodingService(CacheManager cacheManager, GeoLocationRepository repository, GoogleGeocodingClient googleClient) {
+    public GeocodingService(CacheManager cacheManager, GeoLocationRepository repository,
+            GoogleGeocodingClient googleClient) {
         this.repository = repository;
         this.googleClient = googleClient;
         this.cacheManager = cacheManager;
@@ -33,13 +29,16 @@ public class GeocodingService {
         String address = normalize(rawAddress);
 
         Location cached = getFromCache(address);
-        if (cached != null) return toResult(cached, "cache");
+        if (cached != null)
+            return toResult(cached, "cache");
 
         Location fromDb = getFromDatabase(address);
-        if (fromDb != null) return toResult(fromDb, "database");
+        if (fromDb != null)
+            return toResult(fromDb, "database");
 
         Location fromGoogle = getFromGoogle(address, rawAddress);
-        if (fromGoogle != null) return toResult(fromGoogle, "google");
+        if (fromGoogle != null)
+            return toResult(fromGoogle, "google");
 
         return null;
     }
@@ -50,17 +49,10 @@ public class GeocodingService {
 
     private Location getFromCache(String address) {
         try {
-            if (cacheManager != null) {
-                Cache cache = cacheManager.getCache("geocoding");
-                if (cache != null) {
-                    Cache.ValueWrapper cached = cache.get(address);
-                    if (cached != null) {
-                        Object value = cached.get();
-                        if (value instanceof Location location) {
-                            return location;
-                        }
-                    }
-                }
+            Cache cache = cacheManager.getCache("geocoding");
+            Cache.ValueWrapper cached = cache.get(address);
+            if (cached != null && cached.get() instanceof Location location) {
+                return location;
             }
         } catch (RuntimeException e) {
             log.warn("Cache read failed, falling back to database/Google: {}: {}",
@@ -72,13 +64,12 @@ public class GeocodingService {
 
     private Location getFromDatabase(String address) {
         Optional<GeoLocation> fromDb = repository.findByAddress(address);
-        if (fromDb.isPresent()) {
-            GeoLocation entity = fromDb.get();
-            Location location = new Location(entity.getAddress(), entity.getLatitude(), entity.getLongitude());
-            putToCache(address, location);
-            return location;
+        if (fromDb.isEmpty()) {
+            return null;
         }
-        return null;
+        Location location = fromDb.get().toLocation();
+        putToCache(address, location);
+        return location;
     }
 
     private Location getFromGoogle(String address, String rawAddress) {
@@ -91,7 +82,7 @@ public class GeocodingService {
         Coordinates coordinates = fromGoogle.get();
         GeoLocation saved = repository.save(
                 new GeoLocation(address, coordinates.latitude(), coordinates.longitude()));
-        Location location = new Location(saved.getAddress(), saved.getLatitude(), saved.getLongitude());
+        Location location = saved.toLocation();
         putToCache(address, location);
         return location;
     }
