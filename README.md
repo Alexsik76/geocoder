@@ -114,18 +114,29 @@ Test coverage includes plain unit tests (Mockito), `@WebMvcTest` slices, `@Sprin
 
 ## Possible improvements
 
-**Address normalization.** Input is currently normalized only by trimming
-surrounding whitespace, so different spellings of the same address create
-separate cache and database records — for example,
-"Yerusalymka St, Vinnytsia" and "Vinnytsia, Yerusalymka St" are stored
-independently. A safe first step would be to also lowercase the input,
-strip punctuation, and collapse internal whitespace; this merges trivial
-variations without risk. It would not, however, merge different word
-orderings, and stronger local heuristics such as token sorting are
-intentionally avoided: reordering words discards positional meaning and
-causes false merges where order is significant
-(e.g. "Lvivska St, Kyiv" vs "Kyivska St, Lviv"), and a false merge
-returns wrong coordinates silently, which is worse than a duplicate.
+**Address normalization.** Input is normalized before cache and database
+lookups by converting it to lowercase, replacing punctuation (commas and
+dots) with spaces, collapsing internal whitespace, and trimming. This
+merges trivial spelling variations of the same address (e.g. "Kyiv, Ukraine"
+vs "kyiv ukraine") into a single key, preventing duplicate API calls and
+records. A Flyway V2 migration brought pre-existing database rows to this
+normalized format.
+
+Addresses are stored and displayed in this normalized form. The application
+intentionally does not preserve the raw user input: stored addresses serve
+as a lookup key rather than a display string, and the first-seen raw
+spelling has no value to subsequent users (in production traffic, raw input
+contains individual typos and abbreviations useful only for resolution).
+If a canonical human-readable display string were ever required, the correct
+source would be Google's `formatted_address`, not the raw input.
+
+This normalization does not, however, merge different word orderings of the
+same address — for example, "Yerusalymka St, Vinnytsia" and "Vinnytsia,
+Yerusalymka St" are still stored as separate records. Stronger local
+heuristics such as token sorting are intentionally avoided: reordering
+words discards positional meaning and causes false merges where order is
+significant (e.g. "Lvivska St, Kyiv" vs "Kyivska St, Lviv"), and a false
+merge returns wrong coordinates silently, which is worse than a duplicate.
 
 Correctly canonicalizing arbitrary address strings requires knowing the
 role of each token (city, street, house number, region), which is the
