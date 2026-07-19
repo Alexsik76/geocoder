@@ -1,6 +1,7 @@
 package com.example.geocoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,9 +18,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.junit.jupiter.api.parallel.ExecutionMode;
-
-
-
 
 @SpringBootTest
 @Execution(ExecutionMode.SAME_THREAD)
@@ -40,10 +38,54 @@ class GeocodingIntegrationTest {
 
     @BeforeEach
     void clearCache() {
-        cacheManager.getCache("geocoding").clear();
+        Cache cache = cacheManager.getCache("geocoding");
+        if (cache != null) {
+            cache.clear();
+            for (int attempt = 0; attempt < 50; attempt++) {
+                if (cache.get("kyiv ukraine") == null) {
+                    return;
+                }
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(e);
+                }
+            }
+        }
     }
 
-     @Test
+    @Test
+    void seedDataLookupIsConsistentForLegacyFormat() {
+        GeocodingResult result = service.geocode("Kyiv, Ukraine");
+        assertThat(result).isNotNull();
+        assertThat(result.source()).isEqualTo("database");
+        assertThat(result.latitude()).isEqualTo(50.4501);
+        assertThat(result.longitude()).isEqualTo(30.5234);
+        verify(googleClient, never()).geocode(any());
+    }
+
+    @Test
+    void seedDataLookupIsConsistentForNormalizedFormat() {
+        GeocodingResult result = service.geocode("kyiv ukraine");
+        assertThat(result).isNotNull();
+        assertThat(result.source()).isEqualTo("database");
+        assertThat(result.latitude()).isEqualTo(50.4501);
+        assertThat(result.longitude()).isEqualTo(30.5234);
+        verify(googleClient, never()).geocode(any());
+    }
+
+    @Test
+    void seedDataLookupIsConsistentForUppercaseFormat() {
+        GeocodingResult result = service.geocode("KYIV,  UKRAINE");
+        assertThat(result).isNotNull();
+        assertThat(result.source()).isEqualTo("database");
+        assertThat(result.latitude()).isEqualTo(50.4501);
+        assertThat(result.longitude()).isEqualTo(30.5234);
+        verify(googleClient, never()).geocode(any());
+    }
+
+    @Test
     void secondCallIsServedFromCacheAfterDatabaseLookup() {
         String address = ("db entry " + UUID.randomUUID()).toLowerCase();
         repository.save(new GeoLocation(address, 11.11, 22.22));
@@ -78,13 +120,13 @@ class GeocodingIntegrationTest {
         when(googleClient.geocode(address)).thenReturn(Optional.empty());
         GeocodingResult second = service.geocode(address);
 
-            assertThat(first).isNotNull();
-            assertThat(first.source()).isEqualTo("google");
-            assertThat(second).isNotNull();
-            assertThat(second.source()).isEqualTo("cache");
-            assertThat(second.latitude()).isEqualTo(first.latitude());
-            assertThat(second.longitude()).isEqualTo(first.longitude());
-        }
+        assertThat(first).isNotNull();
+        assertThat(first.source()).isEqualTo("google");
+        assertThat(second).isNotNull();
+        assertThat(second.source()).isEqualTo("cache");
+        assertThat(second.latitude()).isEqualTo(first.latitude());
+        assertThat(second.longitude()).isEqualTo(first.longitude());
+    }
 
     @Test
     void unknownAddressGoesToGoogleAndIsPersisted() {
@@ -157,7 +199,8 @@ class GeocodingIntegrationTest {
         // Await async Lettuce Redis write to become visible
         awaitCacheWriteVisible(cache, address);
 
-        // Second call should return from cache with source "cache" and Location object stored
+        // Second call should return from cache with source "cache" and Location object
+        // stored
         GeocodingResult second = service.geocode(address);
 
         assertThat(second).isNotNull();
@@ -166,16 +209,28 @@ class GeocodingIntegrationTest {
         assertThat(second.longitude()).isEqualTo(6.6);
     }
 
-    // DefaultRedisCacheWriter.put() writes asynchronously (fire-and-forget) whenever
-    // the RedisConnectionFactory also implements ReactiveRedisConnectionFactory, which
-    // LettuceConnectionFactory does here since reactor-core is on the classpath - see
-    // DefaultRedisCacheWriter's constructor (asynchronousWrites=true in that case) and
-    // put(): `asyncCacheWriter.store(...).thenRun(...)` instead of a blocking execute().
-    // So Cache.put() can return before the value is actually visible to Cache.get().
-    // Raw RedisTemplate.opsForValue().set() is unaffected (always synchronous) and real
-    // requests never hit this window, since the write and the read happen on separate
-    // HTTP calls; only this test writes to the cache directly and reads it back with no
+    // DefaultRedisCacheWriter.put() writes asynchronously (fire-and-forget)
+    // whenever
+    // the RedisConnectionFactory also implements ReactiveRedisConnectionFactory,
+    // which
+    // LettuceConnectionFactory does here since reactor-core is on the classpath -
+    // see
+    // DefaultRedisCacheWriter's constructor (asynchronousWrites=true in that case)
+    // and
+    // put(): `asyncCacheWriter.store(...).thenRun(...)` instead of a blocking
+    // execute().
+    // So Cache.put() can return before the value is actually visible to
+    // Cache.get().
+    // Raw RedisTemplate.opsForValue().set() is unaffected (always synchronous) and
+    // real
+    // requests never hit this window, since the write and the read happen on
+    // separate
+    // HTTP calls; only this test writes to the cache directly and reads it back
+    // with no
     // I/O in between, so it must wait the async write out before asserting.
+    // See: https://github.com/spring-projects/spring-data-redis/issues/3348
+    // ("RedisCacheWriter default changed from synchronous to asynchronous in 4.x
+    // without clear migration notice")
     private void awaitCacheWriteVisible(Cache cache, String key) {
         for (int attempt = 0; attempt < 50; attempt++) {
             if (cache.get(key) != null) {
