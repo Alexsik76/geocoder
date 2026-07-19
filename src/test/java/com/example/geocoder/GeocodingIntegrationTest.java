@@ -8,19 +8,18 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Predicate;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.Execution;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.junit.jupiter.api.parallel.ExecutionMode;
 
 @SpringBootTest
-@Execution(ExecutionMode.SAME_THREAD)
 @Import(TestcontainersConfiguration.class)
 class GeocodingIntegrationTest {
 
@@ -91,13 +90,16 @@ class GeocodingIntegrationTest {
         repository.save(new GeoLocation(address, 11.11, 22.22));
 
         GeocodingResult first = service.geocode(address);
+        Cache cache = cacheManager.getCache("geocoding");
+        awaitCacheValue(cache, address, v -> v instanceof Location);
+
         // remove the entry from the database: from now on it exists only in the cache
         repository.deleteAll();
         GeocodingResult second = service.geocode(address);
 
         assertThat(first).isNotNull();
         assertThat(first.source()).isEqualTo("database");
-        Cache.ValueWrapper cachedValue = cacheManager.getCache("geocoding").get(address);
+        Cache.ValueWrapper cachedValue = cache.get(address);
         assertThat(cachedValue).isNotNull();
         assertThat(cachedValue.get()).isInstanceOf(Location.class);
         assertThat(second).isNotNull();
@@ -114,6 +116,9 @@ class GeocodingIntegrationTest {
                 .thenReturn(Optional.of(new Coordinates(1.0, 2.0)));
 
         GeocodingResult first = service.geocode(address);
+        Cache cache = cacheManager.getCache("geocoding");
+        awaitCacheValue(cache, address, v -> v instanceof Location);
+
         // remove the entry from the database and "unteach" Google:
         // from now on the value exists only in the cache
         repository.deleteAll();
@@ -167,7 +172,7 @@ class GeocodingIntegrationTest {
         Location cachedLocation = new Location(address, 3.3, 3.3);
         Cache cache = cacheManager.getCache("geocoding");
         cache.put(address, cachedLocation);
-        awaitCacheWriteVisible(cache, address);
+        awaitCacheValue(cache, address, v -> v instanceof Location);
 
         GeocodingResult result = service.geocode(address);
 
@@ -186,21 +191,18 @@ class GeocodingIntegrationTest {
         GeocodingResult legacyEntry = new GeocodingResult(address, 9.9, 9.9, "database");
         Cache cache = cacheManager.getCache("geocoding");
         cache.put(address, legacyEntry);
-        awaitCacheWriteVisible(cache, address);
+        awaitCacheValue(cache, address, v -> v instanceof GeocodingResult);
 
         // First call should treat legacy entry as cache miss and return from database
         GeocodingResult first = service.geocode(address);
+        awaitCacheValue(cache, address, v -> v instanceof Location);
 
         assertThat(first).isNotNull();
         assertThat(first.source()).isEqualTo("database");
         assertThat(first.latitude()).isEqualTo(5.5);
         assertThat(first.longitude()).isEqualTo(6.6);
 
-        // Await async Lettuce Redis write to become visible
-        awaitCacheWriteVisible(cache, address);
-
-        // Second call should return from cache with source "cache" and Location object
-        // stored
+        // Second call should return from cache with source "cache" and Location object stored
         GeocodingResult second = service.geocode(address);
 
         assertThat(second).isNotNull();
@@ -209,31 +211,23 @@ class GeocodingIntegrationTest {
         assertThat(second.longitude()).isEqualTo(6.6);
     }
 
-    // DefaultRedisCacheWriter.put() writes asynchronously (fire-and-forget)
-    // whenever
-    // the RedisConnectionFactory also implements ReactiveRedisConnectionFactory,
-    // which
-    // LettuceConnectionFactory does here since reactor-core is on the classpath -
-    // see
-    // DefaultRedisCacheWriter's constructor (asynchronousWrites=true in that case)
-    // and
-    // put(): `asyncCacheWriter.store(...).thenRun(...)` instead of a blocking
-    // execute().
-    // So Cache.put() can return before the value is actually visible to
-    // Cache.get().
-    // Raw RedisTemplate.opsForValue().set() is unaffected (always synchronous) and
-    // real
-    // requests never hit this window, since the write and the read happen on
-    // separate
-    // HTTP calls; only this test writes to the cache directly and reads it back
-    // with no
+    // DefaultRedisCacheWriter.put() writes asynchronously (fire-and-forget) whenever
+    // the RedisConnectionFactory also implements ReactiveRedisConnectionFactory, which
+    // LettuceConnectionFactory does here since reactor-core is on the classpath - see
+    // DefaultRedisCacheWriter's constructor (asynchronousWrites=true in that case) and
+    // put(): `asyncCacheWriter.store(...).thenRun(...)` instead of a blocking execute().
+    // So Cache.put() can return before the value is actually visible to Cache.get().
+    // Raw RedisTemplate.opsForValue().set() is unaffected (always synchronous) and real
+    // requests never hit this window, since the write and the read happen on separate
+    // HTTP calls; only this test writes to the cache directly and reads it back with no
     // I/O in between, so it must wait the async write out before asserting.
     // See: https://github.com/spring-projects/spring-data-redis/issues/3348
     // ("RedisCacheWriter default changed from synchronous to asynchronous in 4.x
     // without clear migration notice")
-    private void awaitCacheWriteVisible(Cache cache, String key) {
+    private void awaitCacheValue(Cache cache, String key, Predicate<Object> expected) {
         for (int attempt = 0; attempt < 50; attempt++) {
-            if (cache.get(key) != null) {
+            Cache.ValueWrapper wrapper = cache.get(key);
+            if (wrapper != null && expected.test(wrapper.get())) {
                 return;
             }
             try {
@@ -243,6 +237,6 @@ class GeocodingIntegrationTest {
                 throw new IllegalStateException(e);
             }
         }
-        throw new IllegalStateException("Cache write for key '" + key + "' did not become visible in time");
+        throw new IllegalStateException("Cache value for key '" + key + "' did not satisfy condition in time");
     }
 }
