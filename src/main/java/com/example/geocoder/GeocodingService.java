@@ -30,33 +30,22 @@ public class GeocodingService {
     }
 
     public GeocodingResult geocode(String rawAddress) {
-        String normalizedAddress = normalize(rawAddress);
+        String address = normalize(rawAddress);
 
-        Location cachedLocation = getFromCache(normalizedAddress);
-        if (cachedLocation != null) {
-            return new GeocodingResult(cachedLocation.address(), cachedLocation.latitude(), cachedLocation.longitude(), "cache");
-        }
+        Location cached = getFromCache(address);
+        if (cached != null) return toResult(cached, "cache");
 
-        Optional<GeoLocation> fromDb = repository.findByAddress(normalizedAddress);
-        if (fromDb.isPresent()) {
-            GeoLocation entity = fromDb.get();
-            Location location = new Location(entity.getAddress(), entity.getLatitude(), entity.getLongitude());
-            putToCache(normalizedAddress, location);
-            return new GeocodingResult(location.address(), location.latitude(), location.longitude(), "database");
-        }
+        Location fromDb = getFromDatabase(address);
+        if (fromDb != null) return toResult(fromDb, "database");
 
-        String originalTrimmed = rawAddress == null ? "" : rawAddress.trim();
-        Optional<Coordinates> fromGoogle = googleClient.geocode(originalTrimmed);
-        if (fromGoogle.isEmpty()) {
-            return null;
-        }
+        Location fromGoogle = getFromGoogle(address, rawAddress);
+        if (fromGoogle != null) return toResult(fromGoogle, "google");
 
-        Coordinates coordinates = fromGoogle.get();
-        GeoLocation saved = repository.save(
-                new GeoLocation(normalizedAddress, coordinates.latitude(), coordinates.longitude()));
-        Location location = new Location(saved.getAddress(), saved.getLatitude(), saved.getLongitude());
-        putToCache(normalizedAddress, location);
-        return new GeocodingResult(location.address(), location.latitude(), location.longitude(), "google");
+        return null;
+    }
+
+    private GeocodingResult toResult(Location location, String source) {
+        return new GeocodingResult(location.address(), location.latitude(), location.longitude(), source);
     }
 
     private Location getFromCache(String address) {
@@ -79,6 +68,32 @@ public class GeocodingService {
             log.debug("Cache read failure details", e);
         }
         return null;
+    }
+
+    private Location getFromDatabase(String address) {
+        Optional<GeoLocation> fromDb = repository.findByAddress(address);
+        if (fromDb.isPresent()) {
+            GeoLocation entity = fromDb.get();
+            Location location = new Location(entity.getAddress(), entity.getLatitude(), entity.getLongitude());
+            putToCache(address, location);
+            return location;
+        }
+        return null;
+    }
+
+    private Location getFromGoogle(String address, String rawAddress) {
+        String originalTrimmed = rawAddress == null ? "" : rawAddress.trim();
+        Optional<Coordinates> fromGoogle = googleClient.geocode(originalTrimmed);
+        if (fromGoogle.isEmpty()) {
+            return null;
+        }
+
+        Coordinates coordinates = fromGoogle.get();
+        GeoLocation saved = repository.save(
+                new GeoLocation(address, coordinates.latitude(), coordinates.longitude()));
+        Location location = new Location(saved.getAddress(), saved.getLatitude(), saved.getLongitude());
+        putToCache(address, location);
+        return location;
     }
 
     private void putToCache(String address, Location location) {
