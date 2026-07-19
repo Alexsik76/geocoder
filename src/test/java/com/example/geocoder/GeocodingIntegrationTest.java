@@ -55,6 +55,9 @@ class GeocodingIntegrationTest {
 
         assertThat(first).isNotNull();
         assertThat(first.source()).isEqualTo("database");
+        Cache.ValueWrapper cachedValue = cacheManager.getCache("geocoding").get(address);
+        assertThat(cachedValue).isNotNull();
+        assertThat(cachedValue.get()).isInstanceOf(Location.class);
         assertThat(second).isNotNull();
         assertThat(second.source()).isEqualTo("cache");
         assertThat(second.latitude()).isEqualTo(first.latitude());
@@ -119,9 +122,9 @@ class GeocodingIntegrationTest {
         repository.save(new GeoLocation(address, 2.2, 2.2));
 
         // Setup Cache
-        GeocodingResult cachedResult = new GeocodingResult(address, 3.3, 3.3, "cache");
+        Location cachedLocation = new Location(address, 3.3, 3.3);
         Cache cache = cacheManager.getCache("geocoding");
-        cache.put(address, cachedResult);
+        cache.put(address, cachedLocation);
         awaitCacheWriteVisible(cache, address);
 
         GeocodingResult result = service.geocode(address);
@@ -130,6 +133,37 @@ class GeocodingIntegrationTest {
         assertThat(result.source()).isEqualTo("cache");
         assertThat(result.latitude()).isEqualTo(3.3);
         assertThat(result.longitude()).isEqualTo(3.3);
+    }
+
+    @Test
+    void legacyCacheEntryIsTreatedAsCacheMiss() {
+        String address = ("legacy entry " + UUID.randomUUID()).toLowerCase();
+        repository.save(new GeoLocation(address, 5.5, 6.6));
+
+        // Put legacy GeocodingResult object into cache
+        GeocodingResult legacyEntry = new GeocodingResult(address, 9.9, 9.9, "database");
+        Cache cache = cacheManager.getCache("geocoding");
+        cache.put(address, legacyEntry);
+        awaitCacheWriteVisible(cache, address);
+
+        // First call should treat legacy entry as cache miss and return from database
+        GeocodingResult first = service.geocode(address);
+
+        assertThat(first).isNotNull();
+        assertThat(first.source()).isEqualTo("database");
+        assertThat(first.latitude()).isEqualTo(5.5);
+        assertThat(first.longitude()).isEqualTo(6.6);
+
+        // Await async Lettuce Redis write to become visible
+        awaitCacheWriteVisible(cache, address);
+
+        // Second call should return from cache with source "cache" and Location object stored
+        GeocodingResult second = service.geocode(address);
+
+        assertThat(second).isNotNull();
+        assertThat(second.source()).isEqualTo("cache");
+        assertThat(second.latitude()).isEqualTo(5.5);
+        assertThat(second.longitude()).isEqualTo(6.6);
     }
 
     // DefaultRedisCacheWriter.put() writes asynchronously (fire-and-forget) whenever

@@ -40,6 +40,24 @@ class GeocodingServiceTest {
 
 
     @Test
+    void returnsFromCacheWhenFound() {
+        when(cacheManager.getCache("geocoding")).thenReturn(cache);
+        org.springframework.cache.Cache.ValueWrapper wrapper = org.mockito.Mockito.mock(org.springframework.cache.Cache.ValueWrapper.class);
+        when(wrapper.get()).thenReturn(new Location("kyiv ukraine", 50.4501, 30.5234));
+        when(cache.get("kyiv ukraine")).thenReturn(wrapper);
+
+        GeocodingResult result = service.geocode("Kyiv, Ukraine");
+
+        assertThat(result).isNotNull();
+        assertThat(result.source()).isEqualTo("cache");
+        assertThat(result.address()).isEqualTo("kyiv ukraine");
+        assertThat(result.latitude()).isEqualTo(50.4501);
+        assertThat(result.longitude()).isEqualTo(30.5234);
+        verify(repository, never()).findByAddress(any());
+        verify(googleClient, never()).geocode(any());
+    }
+
+    @Test
     void returnsFromDatabaseWhenFound() {
         when(repository.findByAddress("kyiv ukraine"))
                 .thenReturn(Optional.of(new GeoLocation("kyiv ukraine", 50.4501, 30.5234)));

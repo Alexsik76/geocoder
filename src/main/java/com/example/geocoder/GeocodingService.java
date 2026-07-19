@@ -17,8 +17,8 @@ public class GeocodingService {
 
     private final CacheManager cacheManager;
 
-    private GeoLocationRepository repository;
-    private GoogleGeocodingClient googleClient;
+    private final GeoLocationRepository repository;
+    private final GoogleGeocodingClient googleClient;
 
 
 
@@ -31,19 +31,18 @@ public class GeocodingService {
 
     public GeocodingResult geocode(String rawAddress) {
         String normalizedAddress = normalize(rawAddress);
-        
-        GeocodingResult cachedResult = getFromCache(normalizedAddress);
-        if (cachedResult != null) {
-            return cachedResult;
+
+        Location cachedLocation = getFromCache(normalizedAddress);
+        if (cachedLocation != null) {
+            return new GeocodingResult(cachedLocation.address(), cachedLocation.latitude(), cachedLocation.longitude(), "cache");
         }
 
         Optional<GeoLocation> fromDb = repository.findByAddress(normalizedAddress);
         if (fromDb.isPresent()) {
-            GeoLocation location = fromDb.get();
-            GeocodingResult result = new GeocodingResult(
-                    location.getAddress(), location.getLatitude(), location.getLongitude(), "database");
-            putToCache(normalizedAddress, result);
-            return result;
+            GeoLocation entity = fromDb.get();
+            Location location = new Location(entity.getAddress(), entity.getLatitude(), entity.getLongitude());
+            putToCache(normalizedAddress, location);
+            return new GeocodingResult(location.address(), location.latitude(), location.longitude(), "database");
         }
 
         String originalTrimmed = rawAddress == null ? "" : rawAddress.trim();
@@ -55,26 +54,21 @@ public class GeocodingService {
         Coordinates coordinates = fromGoogle.get();
         GeoLocation saved = repository.save(
                 new GeoLocation(normalizedAddress, coordinates.latitude(), coordinates.longitude()));
-        GeocodingResult result = new GeocodingResult(
-                saved.getAddress(), saved.getLatitude(), saved.getLongitude(), "google");
-        putToCache(normalizedAddress, result);
-        return result;
+        Location location = new Location(saved.getAddress(), saved.getLatitude(), saved.getLongitude());
+        putToCache(normalizedAddress, location);
+        return new GeocodingResult(location.address(), location.latitude(), location.longitude(), "google");
     }
 
-    private GeocodingResult getFromCache(String address) {
+    private Location getFromCache(String address) {
         try {
             if (cacheManager != null) {
                 Cache cache = cacheManager.getCache("geocoding");
                 if (cache != null) {
                     Cache.ValueWrapper cached = cache.get(address);
                     if (cached != null) {
-                        GeocodingResult cachedResult = (GeocodingResult) cached.get();
-                        if (cachedResult != null) {
-                            return new GeocodingResult(
-                                    cachedResult.address(),
-                                    cachedResult.latitude(),
-                                    cachedResult.longitude(),
-                                    "cache");
+                        Object value = cached.get();
+                        if (value instanceof Location location) {
+                            return location;
                         }
                     }
                 }
@@ -87,12 +81,12 @@ public class GeocodingService {
         return null;
     }
 
-    private void putToCache(String address, GeocodingResult result) {
+    private void putToCache(String address, Location location) {
         try {
-            if (cacheManager != null && result != null) {
+            if (cacheManager != null && location != null) {
                 Cache cache = cacheManager.getCache("geocoding");
                 if (cache != null) {
-                    cache.put(address, result);
+                    cache.put(address, location);
                 }
             }
         } catch (RuntimeException e) {

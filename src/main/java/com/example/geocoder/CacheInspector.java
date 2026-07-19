@@ -24,7 +24,7 @@ public class CacheInspector {
         this.redisTemplate = redisTemplate;
     }
 
-    public List<GeocodingResult> latestEntries() {
+    public List<Location> latestEntries() {
         try {
             List<String> keys = new ArrayList<>();
             ScanOptions options = ScanOptions.scanOptions().match(KEY_PATTERN).count(100).build();
@@ -34,11 +34,11 @@ public class CacheInspector {
                 }
             }
 
-            List<GeocodingResult> entries = new ArrayList<>();
+            List<Location> entries = new ArrayList<>();
             for (String key : keys) {
                 Object value = redisTemplate.opsForValue().get(key);
-                if (value instanceof GeocodingResult result) {
-                    entries.add(result);
+                if (value instanceof Location location) {
+                    entries.add(location);
                 }
             }
             return entries;
