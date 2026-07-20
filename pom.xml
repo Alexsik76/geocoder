@@ -9,7 +9,7 @@
 		<version>4.1.0</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.example</groupId>
+	<groupId>ua.vn.lab</groupId>
 	<artifactId>geocoder</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>geocoder</name>

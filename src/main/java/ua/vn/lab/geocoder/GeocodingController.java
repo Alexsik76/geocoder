@@ -1,4 +1,4 @@
-package com.example.geocoder;
+package ua.vn.lab.geocoder;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

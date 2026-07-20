@@ -1,4 +1,4 @@
-package com.example.geocoder;
+package ua.vn.lab.geocoder;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -1,4 +1,4 @@
-package com.example.geocoder;
+package ua.vn.lab.geocoder;
 
 import java.util.Optional;
 import java.util.Locale;

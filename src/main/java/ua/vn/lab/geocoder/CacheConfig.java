@@ -1,4 +1,4 @@
-package com.example.geocoder;
+package ua.vn.lab.geocoder;
 
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +19,7 @@ public class CacheConfig {
 
     public CacheConfig() {
         var typeValidator = BasicPolymorphicTypeValidator.builder()
-                .allowIfSubType("com.example.geocoder.")
+                .allowIfSubType("ua.vn.lab.geocoder.")
                 .build();
         this.valueSerializer = GenericJacksonJsonRedisSerializer.create(
                 builder -> builder.enableDefaultTyping(typeValidator));

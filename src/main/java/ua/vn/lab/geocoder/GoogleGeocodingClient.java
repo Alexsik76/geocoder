@@ -1,4 +1,4 @@
-package com.example.geocoder;
+package ua.vn.lab.geocoder;
 
 import io.github.resilience4j.retry.annotation.Retry;
 import java.util.List;
