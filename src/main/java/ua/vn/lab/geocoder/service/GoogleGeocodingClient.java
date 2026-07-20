@@ -1,4 +1,6 @@
-package ua.vn.lab.geocoder;
+package ua.vn.lab.geocoder.service;
+
+import ua.vn.lab.geocoder.domain.Coordinates;
 
 import io.github.resilience4j.retry.annotation.Retry;
 import java.util.List;

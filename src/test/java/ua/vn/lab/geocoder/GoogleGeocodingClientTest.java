@@ -1,5 +1,8 @@
 package ua.vn.lab.geocoder;
 
+import ua.vn.lab.geocoder.domain.Coordinates;
+import ua.vn.lab.geocoder.service.GoogleGeocodingClient;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;

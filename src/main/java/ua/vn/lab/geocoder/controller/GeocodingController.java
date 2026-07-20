@@ -1,4 +1,7 @@
-package ua.vn.lab.geocoder;
+package ua.vn.lab.geocoder.controller;
+
+import ua.vn.lab.geocoder.domain.GeocodingResult;
+import ua.vn.lab.geocoder.service.GeocodingService;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

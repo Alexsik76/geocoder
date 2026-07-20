@@ -1,4 +1,4 @@
-package ua.vn.lab.geocoder;
+package ua.vn.lab.geocoder.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

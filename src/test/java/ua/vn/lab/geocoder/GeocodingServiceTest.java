@@ -1,5 +1,13 @@
 package ua.vn.lab.geocoder;
 
+import ua.vn.lab.geocoder.domain.Coordinates;
+import ua.vn.lab.geocoder.domain.GeoLocation;
+import ua.vn.lab.geocoder.domain.GeocodingResult;
+import ua.vn.lab.geocoder.domain.Location;
+import ua.vn.lab.geocoder.repository.GeoLocationRepository;
+import ua.vn.lab.geocoder.service.GeocodingService;
+import ua.vn.lab.geocoder.service.GoogleGeocodingClient;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;

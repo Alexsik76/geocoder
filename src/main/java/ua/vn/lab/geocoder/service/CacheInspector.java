@@ -1,4 +1,6 @@
-package ua.vn.lab.geocoder;
+package ua.vn.lab.geocoder.service;
+
+import ua.vn.lab.geocoder.domain.Location;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -1,4 +1,9 @@
-package ua.vn.lab.geocoder;
+package ua.vn.lab.geocoder.controller;
+
+import ua.vn.lab.geocoder.domain.GeocodingResult;
+import ua.vn.lab.geocoder.repository.GeoLocationRepository;
+import ua.vn.lab.geocoder.service.CacheInspector;
+import ua.vn.lab.geocoder.service.GeocodingService;
 
 import jakarta.servlet.http.HttpServletResponse;
 

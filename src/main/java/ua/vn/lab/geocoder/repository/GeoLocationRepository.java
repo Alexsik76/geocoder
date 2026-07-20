@@ -1,4 +1,6 @@
-package ua.vn.lab.geocoder;
+package ua.vn.lab.geocoder.repository;
+
+import ua.vn.lab.geocoder.domain.GeoLocation;
 
 import java.util.Optional;
 import java.util.List;

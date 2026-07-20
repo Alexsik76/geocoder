@@ -1,4 +1,10 @@
-package ua.vn.lab.geocoder;
+package ua.vn.lab.geocoder.service;
+
+import ua.vn.lab.geocoder.domain.Coordinates;
+import ua.vn.lab.geocoder.domain.GeoLocation;
+import ua.vn.lab.geocoder.domain.GeocodingResult;
+import ua.vn.lab.geocoder.domain.Location;
+import ua.vn.lab.geocoder.repository.GeoLocationRepository;
 
 import java.util.Optional;
 import java.util.Locale;
